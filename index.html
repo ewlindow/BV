@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#20140f">
+  <meta name="description" content="A shareable bourbon collection and shopping wishlist.">
+  <title>Bourbon Vault</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header class="site-header">
+    <div class="shell header-inner">
+      <a class="brand" href="#collection" aria-label="Bourbon Vault home">
+        <span class="brand-mark" aria-hidden="true">BV</span>
+        <span>
+          <strong>Bourbon Vault</strong>
+          <small>Collection &amp; Wishlist</small>
+        </span>
+      </a>
+      <nav aria-label="Primary navigation">
+        <button class="nav-button active" data-view="collection">Collection</button>
+        <button class="nav-button" data-view="wishlist">Wishlist</button>
+      </nav>
+    </div>
+  </header>
+
+  <main class="shell">
+    <section class="hero">
+      <div>
+        <p class="eyebrow">Home collection</p>
+        <h1>Know what is in the house before another bottle follows you home.</h1>
+        <p class="hero-copy">Browse the current collection or use the wishlist while shopping. The duplicate warning is here because memory becomes suspiciously flexible in the liquor aisle.</p>
+      </div>
+      <div class="hero-badge" aria-hidden="true">
+        <span>PRIVATE</span>
+        <strong>RESERVE</strong>
+      </div>
+    </section>
+
+    <section id="collection-view" class="view active" aria-labelledby="collection-title">
+      <div class="section-heading">
+        <div>
+          <p class="eyebrow">Inventory</p>
+          <h2 id="collection-title">Current collection</h2>
+        </div>
+        <div class="count-stack"><p id="collection-count" class="result-count" aria-live="polite"></p><p id="data-status" class="data-status">Loading collection…</p></div>
+      </div>
+
+      <div id="metrics" class="metrics" aria-label="Collection summary"></div>
+
+      <div class="toolbar" aria-label="Collection filters">
+        <label>
+          <span>Search</span>
+          <input id="search-input" type="search" placeholder="Brand, expression, distillery…">
+        </label>
+        <label>
+          <span>Status</span>
+          <select id="status-filter">
+            <option value="">All statuses</option>
+          </select>
+        </label>
+        <label>
+          <span>Distillery</span>
+          <select id="distillery-filter">
+            <option value="">All distilleries</option>
+          </select>
+        </label>
+        <label>
+          <span>Sort</span>
+          <select id="sort-filter">
+            <option value="brand">Brand A–Z</option>
+            <option value="proof-desc">Highest proof</option>
+            <option value="proof-asc">Lowest proof</option>
+            <option value="msrp-desc">Highest MSRP</option>
+          </select>
+        </label>
+      </div>
+
+      <div id="collection-grid" class="card-grid"></div>
+      <p id="collection-empty" class="empty-state" hidden>No bottles match those filters. The bourbon exists; your search criteria are simply being dramatic.</p>
+    </section>
+
+    <section id="wishlist-view" class="view" aria-labelledby="wishlist-title">
+      <div class="section-heading">
+        <div>
+          <p class="eyebrow">Shopping mode</p>
+          <h2 id="wishlist-title">Shareable wishlist</h2>
+        </div>
+        <p id="wishlist-count" class="result-count"></p>
+      </div>
+
+      <div class="shopping-note">
+        <strong>How to use this:</strong>
+        <span>Check the bottle name, confirm it says “Safe to Buy,” and do not pay more than the listed maximum. Civilization may continue.</span>
+      </div>
+
+      <div id="wishlist-grid" class="wishlist-grid"></div>
+    </section>
+  </main>
+
+  <dialog id="bottle-dialog">
+    <button class="dialog-close" type="button" aria-label="Close bottle details">×</button>
+    <div id="dialog-content"></div>
+  </dialog>
+
+  <footer>
+    <div class="shell">
+      <p>Static Bourbon Vault release. Update <code>data.js</code> when the workbook changes.</p>
+    </div>
+  </footer>
+
+  <script src="config.js"></script>
+  <script src="fallback-data.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
