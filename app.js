@@ -1,1606 +1,831 @@
 "use strict";
 
-let vaultData = {
-apiVersion: "2.0",
-generatedAt: "",
-dashboard: {},
-catalog: [],
-inventory: [],
-wishlist: [],
-purchases: [],
-tastings: [],
-hunts: []
+const state = {
+  data: {
+    apiVersion: "2.0",
+    generatedAt: "",
+    dashboard: {},
+    catalog: [],
+    inventory: [],
+    wishlist: [],
+    purchases: [],
+    tastings: [],
+    hunts: []
+  },
+  source: ""
 };
 
 const money = new Intl.NumberFormat("en-US", {
-style: "currency",
-currency: "USD"
+  style: "currency",
+  currency: "USD"
 });
 
-const wholeNumber = new Intl.NumberFormat("en-US", {
-maximumFractionDigits: 0
+const integer = new Intl.NumberFormat("en-US", {
+  maximumFractionDigits: 0
 });
 
-const elements = {
-dataStatus: document.querySelector("#data-status"),
-lastUpdated: document.querySelector("#last-updated"),
-
-dashboardMetrics: document.querySelector("#dashboard-metrics"),
-statusSummary: document.querySelector("#status-summary"),
-huntSummary: document.querySelector("#hunt-summary"),
-recentBottles: document.querySelector("#recent-bottles"),
-
-collectionGrid: document.querySelector("#collection-grid"),
-collectionEmpty: document.querySelector("#collection-empty"),
-collectionCount: document.querySelector("#collection-count"),
-
-wishlistGrid: document.querySelector("#wishlist-grid"),
-wishlistEmpty: document.querySelector("#wishlist-empty"),
-wishlistCount: document.querySelector("#wishlist-count"),
-
-catalogGrid: document.querySelector("#catalog-grid"),
-catalogEmpty: document.querySelector("#catalog-empty"),
-catalogCount: document.querySelector("#catalog-count"),
-
-dialog: document.querySelector("#bottle-dialog"),
-dialogContent: document.querySelector("#dialog-content"),
-
-mobileMenuButton: document.querySelector("#mobile-menu-button"),
-primaryNavigation: document.querySelector("#primary-navigation"),
-
-toastContainer: document.querySelector("#toast-container"),
-footerVersion: document.querySelector("#footer-version")
+const els = {
+  dataStatus: document.querySelector("#data-status"),
+  lastUpdated: document.querySelector("#last-updated"),
+  dashboardMetrics: document.querySelector("#dashboard-metrics"),
+  statusSummary: document.querySelector("#status-summary"),
+  huntSummary: document.querySelector("#hunt-summary"),
+  recentBottles: document.querySelector("#recent-bottles"),
+  collectionGrid: document.querySelector("#collection-grid"),
+  collectionEmpty: document.querySelector("#collection-empty"),
+  collectionCount: document.querySelector("#collection-count"),
+  wishlistGrid: document.querySelector("#wishlist-grid"),
+  wishlistEmpty: document.querySelector("#wishlist-empty"),
+  wishlistCount: document.querySelector("#wishlist-count"),
+  catalogGrid: document.querySelector("#catalog-grid"),
+  catalogEmpty: document.querySelector("#catalog-empty"),
+  catalogCount: document.querySelector("#catalog-count"),
+  dialog: document.querySelector("#bottle-dialog"),
+  dialogContent: document.querySelector("#dialog-content"),
+  dialogClose: document.querySelector(".dialog-close"),
+  mobileMenuButton: document.querySelector("#mobile-menu-button"),
+  primaryNavigation: document.querySelector("#primary-navigation"),
+  toastContainer: document.querySelector("#toast-container"),
+  footerVersion: document.querySelector("#footer-version"),
+  clearCollection: document.querySelector("#clear-collection-filters"),
+  clearWishlist: document.querySelector("#clear-wishlist-filters"),
+  clearCatalog: document.querySelector("#clear-catalog-filters")
 };
 
 const collectionFilters = {
-search: document.querySelector("#search-input"),
-status: document.querySelector("#status-filter"),
-distillery: document.querySelector("#distillery-filter"),
-category: document.querySelector("#category-filter"),
-sort: document.querySelector("#sort-filter")
+  search: document.querySelector("#search-input"),
+  status: document.querySelector("#status-filter"),
+  distillery: document.querySelector("#distillery-filter"),
+  category: document.querySelector("#category-filter"),
+  sort: document.querySelector("#sort-filter")
 };
 
 const wishlistFilters = {
-search: document.querySelector("#wishlist-search-input"),
-priority: document.querySelector("#wishlist-priority-filter"),
-status: document.querySelector("#wishlist-status-filter"),
-duplicate: document.querySelector("#wishlist-duplicate-filter"),
-sort: document.querySelector("#wishlist-sort-filter")
+  search: document.querySelector("#wishlist-search-input"),
+  priority: document.querySelector("#wishlist-priority-filter"),
+  status: document.querySelector("#wishlist-status-filter"),
+  duplicate: document.querySelector("#wishlist-duplicate-filter"),
+  sort: document.querySelector("#wishlist-sort-filter")
 };
 
 const catalogFilters = {
-search: document.querySelector("#catalog-search-input"),
-distillery: document.querySelector("#catalog-distillery-filter"),
-category: document.querySelector("#catalog-category-filter"),
-releaseType: document.querySelector("#catalog-release-filter"),
-sort: document.querySelector("#catalog-sort-filter")
+  search: document.querySelector("#catalog-search-input"),
+  distillery: document.querySelector("#catalog-distillery-filter"),
+  category: document.querySelector("#catalog-category-filter"),
+  releaseType: document.querySelector("#catalog-release-filter"),
+  sort: document.querySelector("#catalog-sort-filter")
 };
 
 const priorityRank = {
-"must find": 1,
-high: 2,
-medium: 3,
-low: 4
+  "must find": 1,
+  "must-have": 1,
+  high: 2,
+  medium: 3,
+  low: 4
 };
 
-function text(value) {
-return value == null ? "" : String(value).trim();
+function str(value) {
+  return value == null ? "" : String(value).trim();
 }
 
 function lower(value) {
-return text(value).toLowerCase();
+  return str(value).toLowerCase();
 }
 
-function numberOrNull(value) {
-if (value == null || value === "") {
-return null;
+function num(value) {
+  if (value == null || value === "") return null;
+  const result = Number(value);
+  return Number.isFinite(result) ? result : null;
 }
 
-const result = Number(value);
-return Number.isFinite(result) ? result : null;
+function html(value) {
+  return str(value)
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
 }
 
-function dateValue(value) {
-const parsed = Date.parse(value);
-return Number.isFinite(parsed) ? parsed : 0;
-}
-
-function unique(values) {
-return [...new Set(values.map(text).filter(Boolean))]
-.sort((a, b) => a.localeCompare(b));
-}
-
-function escapeHtml(value) {
-return text(value)
-.replaceAll("&", "&")
-.replaceAll("<", "<")
-.replaceAll(">", ">")
-.replaceAll('"', """)
-.replaceAll("'", "'");
-}
-
-function escapeAttribute(value) {
-return escapeHtml(value);
-}
-
-function formatMoney(value, fallback = "Not recorded") {
-const amount = numberOrNull(value);
-return amount == null ? fallback : money.format(amount);
-}
-
-function formatProof(value) {
-const proof = numberOrNull(value);
-
-if (proof == null) {
-return "Proof unknown";
-}
-
-return `${Number.isInteger(proof) ? proof : proof.toFixed(1)} proof`;
-}
-
-function formatAge(value) {
-const age = numberOrNull(value);
-
-if (age == null || age <= 0) {
-return "Not stated";
-}
-
-return `${age} ${age === 1 ? "year" : "years"}`;
-}
-
-function formatFill(value) {
-const fill = numberOrNull(value);
-
-if (fill == null) {
-return "Not recorded";
-}
-
-const percentage = fill <= 1 ? fill * 100 : fill;
-return `${Math.round(percentage)}%`;
-}
-
-function formatDate(value, fallback = "Not recorded") {
-if (!value) {
-return fallback;
-}
-
-const parsed = new Date(value);
-
-if (Number.isNaN(parsed.getTime())) {
-return text(value) || fallback;
-}
-
-return parsed.toLocaleDateString("en-US", {
-month: "short",
-day: "numeric",
-year: "numeric"
-});
-}
-
-function formatDateTime(value) {
-if (!value) {
-return "";
-}
-
-const parsed = new Date(value);
-
-if (Number.isNaN(parsed.getTime())) {
-return "";
-}
-
-return parsed.toLocaleString("en-US", {
-month: "short",
-day: "numeric",
-year: "numeric",
-hour: "numeric",
-minute: "2-digit"
-});
+function attr(value) {
+  return html(value);
 }
 
 function slug(value) {
-return lower(value)
-.replace(/[^a-z0-9]+/g, "-")
-.replace(/^-+|-+$/g, "");
+  return lower(value)
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
 }
 
-function resetSelect(select, firstLabel, values) {
-if (!select) {
-return;
+function unique(values) {
+  return [...new Set(values.map(str).filter(Boolean))]
+    .sort((a, b) => a.localeCompare(b));
 }
 
-const currentValue = select.value;
-
-select.innerHTML = `<option value="">${escapeHtml(firstLabel)}</option>`;
-
-values.forEach(value => {
-const option = document.createElement("option");
-option.value = value;
-option.textContent = value;
-select.append(option);
-});
-
-if ([...select.options].some(option => option.value === currentValue)) {
-select.value = currentValue;
-}
+function firstValue(...values) {
+  return values.find(value => str(value)) || "";
 }
 
-function firstNonBlank(...values) {
-return values.find(value => text(value) !== "") || "";
+function firstNumber(...values) {
+  for (const value of values) {
+    const parsed = num(value);
+    if (parsed != null) return parsed;
+  }
+  return null;
+}
+
+function formatMoney(value, fallback = "—") {
+  const amount = num(value);
+  return amount == null ? fallback : money.format(amount);
+}
+
+function formatProof(value) {
+  const proof = num(value);
+  if (proof == null) return "Proof unknown";
+  return `${Number.isInteger(proof) ? proof : proof.toFixed(1)} proof`;
+}
+
+function formatAge(value) {
+  const age = num(value);
+  if (age == null || age <= 0) return "Not stated";
+  return `${age} ${age === 1 ? "year" : "years"}`;
+}
+
+function formatFill(value) {
+  const fill = num(value);
+  if (fill == null) return "Not recorded";
+  return `${Math.round(fill <= 1 ? fill * 100 : fill)}%`;
+}
+
+function parseDate(value) {
+  const parsed = Date.parse(value);
+  return Number.isFinite(parsed) ? parsed : 0;
+}
+
+function formatDate(value, fallback = "Not recorded") {
+  if (!value) return fallback;
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) return str(value) || fallback;
+
+  return parsed.toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric"
+  });
+}
+
+function formatDateTime(value) {
+  if (!value) return "";
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) return "";
+
+  return parsed.toLocaleString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+    hour: "numeric",
+    minute: "2-digit"
+  });
+}
+
+function average(values) {
+  const valid = values.filter(value => num(value) != null).map(Number);
+  if (!valid.length) return 0;
+  return valid.reduce((sum, value) => sum + value, 0) / valid.length;
+}
+
+function normalizedId(item, type) {
+  if (type === "catalog") return firstValue(item.catalogId, item.id, item["Catalog ID"]);
+  if (type === "wishlist") return firstValue(item.wishId, item.id, item["Wish ID"]);
+  return firstValue(item.inventoryId, item.id, item["Inventory ID"], item.bottleId, item["Bottle ID"]);
+}
+
+function normalizeRecord(item = {}) {
+  return {
+    ...item,
+    id: firstValue(item.id, item.inventoryId, item.catalogId, item.wishId, item["Bottle ID"], item["Inventory ID"], item["Catalog ID"], item["Wish ID"]),
+    inventoryId: firstValue(item.inventoryId, item["Inventory ID"], item.bottleId, item["Bottle ID"]),
+    catalogId: firstValue(item.catalogId, item["Catalog ID"]),
+    wishId: firstValue(item.wishId, item["Wish ID"]),
+    brand: firstValue(item.brand, item["Brand"]),
+    expression: firstValue(item.expression, item["Expression"], item.name, item["Bottle Name"]),
+    distillery: firstValue(item.distillery, item["Distillery"]),
+    release: firstValue(item.release, item.batch, item["Batch / Release"], item["Release"]),
+    category: firstValue(item.category, item["Category"], item.type, item["Type"]),
+    releaseType: firstValue(item.releaseType, item["Release Type"]),
+    mashBill: firstValue(item.mashBill, item["Mash Bill"], item["Mash bill"]),
+    status: firstValue(item.status, item["Status"]),
+    priority: firstValue(item.priority, item["Priority"]),
+    duplicateCheck: firstValue(item.duplicateCheck, item["Duplicate Check"]),
+    image: firstValue(item.image, item.imageUrl, item["Image URL"], item["Bottle Image"]),
+    proof: firstNumber(item.proof, item["Proof"]),
+    msrp: firstNumber(item.msrp, item["MSRP"]),
+    buyUnder: firstNumber(item.buyUnder, item["Buy Under"], item["Target Price"]),
+    absoluteMax: firstNumber(item.absoluteMax, item.maxPrice, item["Absolute Max"], item["Maximum Price"]),
+    estimatedValue: firstNumber(item.estimatedValue, item["Estimated Value"], item.value, item["Value"]),
+    age: firstNumber(item.age, item["Age"]),
+    fill: firstNumber(item.fill, item["Fill"], item["Fill Level"]),
+    rating: firstNumber(item.rating, item["Rating"], item["Personal Rating"]),
+    ownedQty: firstNumber(item.ownedQty, item["Owned Qty"], item["Owned Quantity"]),
+    size: firstValue(item.size, item["Size"], item["Bottle Size"]),
+    shelf: firstValue(item.shelf, item["Shelf"], item.location, item["Location"]),
+    notes: firstValue(item.notes, item["Notes"]),
+    dateAdded: firstValue(item.dateAdded, item["Date Added"], item.purchaseDate, item["Purchase Date"]),
+    finishedDate: firstValue(item.finishedDate, item["Finished Date"]),
+    lastSeenDate: firstValue(item.lastSeenDate, item["Last Seen Date"]),
+    whereSeen: firstValue(item.whereSeen, item["Where Seen"]),
+    favorite: item.favorite === true || lower(item.favorite) === "yes" || lower(item["Favorite"]) === "yes"
+  };
 }
 
 function normalizePayload(payload) {
-if (!payload || payload.error) {
-throw new Error(
-payload && payload.message
-? payload.message
-: "Invalid API response"
-);
+  if (!payload || typeof payload !== "object") throw new Error("The API returned no usable data.");
+  if (payload.error) throw new Error(payload.message || "The API returned an error.");
+
+  const inventory = Array.isArray(payload.inventory) ? payload.inventory.map(normalizeRecord) : [];
+  const wishlist = Array.isArray(payload.wishlist) ? payload.wishlist.map(normalizeRecord) : [];
+  const catalog = Array.isArray(payload.catalog) ? payload.catalog.map(normalizeRecord) : [];
+
+  if (!inventory.length && !wishlist.length && !catalog.length) {
+    throw new Error("The API returned an empty vault.");
+  }
+
+  return {
+    apiVersion: str(payload.apiVersion) || "2.0",
+    generatedAt: str(payload.generatedAt),
+    dashboard: payload.dashboard && typeof payload.dashboard === "object" ? payload.dashboard : {},
+    catalog,
+    inventory,
+    wishlist,
+    purchases: Array.isArray(payload.purchases) ? payload.purchases : [],
+    tastings: Array.isArray(payload.tastings) ? payload.tastings : [],
+    hunts: Array.isArray(payload.hunts) ? payload.hunts : []
+  };
 }
 
-if (!Array.isArray(payload.inventory)) {
-throw new Error("API response is missing inventory data.");
-}
+function resetSelect(select, label, values) {
+  if (!select) return;
+  const previous = select.value;
+  select.innerHTML = `<option value="">${html(label)}</option>`;
 
-if (!Array.isArray(payload.wishlist)) {
-throw new Error("API response is missing wishlist data.");
-}
+  values.forEach(value => {
+    const option = document.createElement("option");
+    option.value = value;
+    option.textContent = value;
+    select.append(option);
+  });
 
-return {
-apiVersion: text(payload.apiVersion) || "2.0",
-generatedAt: text(payload.generatedAt),
-dashboard:
-payload.dashboard && typeof payload.dashboard === "object"
-? payload.dashboard
-: {},
-catalog: Array.isArray(payload.catalog) ? payload.catalog : [],
-inventory: payload.inventory,
-wishlist: payload.wishlist,
-purchases: Array.isArray(payload.purchases) ? payload.purchases : [],
-tastings: Array.isArray(payload.tastings) ? payload.tastings : [],
-hunts: Array.isArray(payload.hunts) ? payload.hunts : []
-};
-}
-
-function applyData(payload, source) {
-vaultData = normalizePayload(payload);
-
-populateFilters();
-
-if (elements.footerVersion) {
-elements.footerVersion.textContent =
-`Version ${vaultData.apiVersion || "2.0"}`;
-}
-
-if (elements.dataStatus) {
-elements.dataStatus.textContent =
-source === "live"
-? "Live from Google Sheets"
-: "Showing bundled workbook snapshot";
-
-```
-elements.dataStatus.className =
-  `data-status ${source === "live" ? "live" : "error"}`;
-```
-
-}
-
-if (elements.lastUpdated) {
-elements.lastUpdated.textContent = vaultData.generatedAt
-? `Updated ${formatDateTime(vaultData.generatedAt)}`
-: "";
-}
-
-renderDashboard();
-renderCollection();
-renderWishlist();
-renderCatalog();
+  if ([...select.options].some(option => option.value === previous)) select.value = previous;
 }
 
 function populateFilters() {
-resetSelect(
-collectionFilters.status,
-"All statuses",
-unique(vaultData.inventory.map(item => item.status))
-);
-
-resetSelect(
-collectionFilters.distillery,
-"All distilleries",
-unique(vaultData.inventory.map(item => item.distillery))
-);
-
-resetSelect(
-collectionFilters.category,
-"All categories",
-unique(vaultData.inventory.map(item => item.category))
-);
-
-resetSelect(
-wishlistFilters.priority,
-"All priorities",
-unique(vaultData.wishlist.map(item => item.priority))
-);
-
-resetSelect(
-wishlistFilters.status,
-"All statuses",
-unique(vaultData.wishlist.map(item => item.status))
-);
-
-resetSelect(
-catalogFilters.distillery,
-"All distilleries",
-unique(vaultData.catalog.map(item => item.distillery))
-);
-
-resetSelect(
-catalogFilters.category,
-"All categories",
-unique(vaultData.catalog.map(item => item.category))
-);
-
-resetSelect(
-catalogFilters.releaseType,
-"All release types",
-unique(vaultData.catalog.map(item => item.releaseType))
-);
+  const { inventory, wishlist, catalog } = state.data;
+  resetSelect(collectionFilters.status, "All statuses", unique(inventory.map(item => item.status)));
+  resetSelect(collectionFilters.distillery, "All distilleries", unique(inventory.map(item => item.distillery)));
+  resetSelect(collectionFilters.category, "All categories", unique(inventory.map(item => item.category)));
+  resetSelect(wishlistFilters.priority, "All priorities", unique(wishlist.map(item => item.priority)));
+  resetSelect(wishlistFilters.status, "All statuses", unique(wishlist.map(item => item.status)));
+  resetSelect(catalogFilters.distillery, "All distilleries", unique(catalog.map(item => item.distillery)));
+  resetSelect(catalogFilters.category, "All categories", unique(catalog.map(item => item.category)));
+  resetSelect(catalogFilters.releaseType, "All release types", unique(catalog.map(item => item.releaseType)));
 }
 
-function loadLiveData() {
-const config = window.BOURBON_VAULT_CONFIG || {};
-const apiUrl = text(config.apiUrl);
-
-const configured =
-/^https://script.google.com/macros/s/.+/exec(?:?.*)?$/.test(apiUrl);
-
-if (!configured) {
-useFallbackData(
-"Apps Script URL has not been configured.",
-config
-);
-return;
+function setStatus(message, statusClass = "") {
+  if (!els.dataStatus) return;
+  els.dataStatus.textContent = message;
+  els.dataStatus.className = `data-status ${statusClass}`.trim();
 }
 
-const callbackName = `bourbonVaultCallback_${Date.now()}`;
-const script = document.createElement("script");
+function applyData(payload, source) {
+  state.data = normalizePayload(payload);
+  state.source = source;
+  populateFilters();
+  setStatus(source === "live" ? "Live from Google Sheets" : "Showing bundled workbook snapshot", source === "live" ? "live" : "error");
 
-const timeout = window.setTimeout(() => {
-cleanup();
-useFallbackData("Live Sheet request timed out.", config);
-}, 15000);
-
-function cleanup() {
-window.clearTimeout(timeout);
-delete window[callbackName];
-script.remove();
-}
-
-window[callbackName] = payload => {
-cleanup();
-
-```
-try {
-  applyData(payload, "live");
-} catch (error) {
-  console.error(error);
-  useFallbackData(error.message, config);
-}
-```
-
-};
-
-script.onerror = () => {
-cleanup();
-useFallbackData("Unable to reach Apps Script.", config);
-};
-
-const separator = apiUrl.includes("?") ? "&" : "?";
-
-script.src =
-`${apiUrl}${separator}` +
-`callback=${encodeURIComponent(callbackName)}` +
-`&v=${Date.now()}`;
-
-document.head.append(script);
-}
-
-function useFallbackData(message, config = {}) {
-console.error(message);
-
-if (
-config.useFallbackData !== false &&
-window.BOURBON_DATA
-) {
-try {
-applyData(window.BOURBON_DATA, "fallback");
-
-```
-  if (elements.dataStatus) {
-    elements.dataStatus.textContent =
-      "Live Sheet unavailable · showing bundled snapshot";
-    elements.dataStatus.className = "data-status error";
+  if (els.lastUpdated) {
+    els.lastUpdated.textContent = state.data.generatedAt ? `Updated ${formatDateTime(state.data.generatedAt)}` : "";
   }
 
+  if (els.footerVersion) els.footerVersion.textContent = `Version ${state.data.apiVersion}`;
+  renderEverything();
+}
+
+async function fetchJson(apiUrl) {
+  const separator = apiUrl.includes("?") ? "&" : "?";
+  const response = await fetch(`${apiUrl}${separator}v=${Date.now()}`, {
+    method: "GET",
+    cache: "no-store",
+    redirect: "follow"
+  });
+
+  if (!response.ok) throw new Error(`API returned HTTP ${response.status}.`);
+  return response.json();
+}
+
+function fetchJsonp(apiUrl) {
+  return new Promise((resolve, reject) => {
+    const callbackName = `bourbonVaultCallback_${Date.now()}_${Math.floor(Math.random() * 10000)}`;
+    const script = document.createElement("script");
+    const separator = apiUrl.includes("?") ? "&" : "?";
+
+    const timeout = window.setTimeout(() => {
+      cleanup();
+      reject(new Error("JSONP request timed out."));
+    }, 15000);
+
+    function cleanup() {
+      window.clearTimeout(timeout);
+      delete window[callbackName];
+      script.remove();
+    }
+
+    window[callbackName] = payload => {
+      cleanup();
+      resolve(payload);
+    };
+
+    script.onerror = () => {
+      cleanup();
+      reject(new Error("JSONP request failed."));
+    };
+
+    script.src = `${apiUrl}${separator}callback=${encodeURIComponent(callbackName)}&v=${Date.now()}`;
+    document.head.append(script);
+  });
+}
+
+async function loadLiveData() {
+  const config = window.BOURBON_VAULT_CONFIG || {};
+  const apiUrl = str(config.apiUrl);
+
+  if (!/^https:\/\/script\.google\.com\/macros\/s\/.+\/exec(?:\?.*)?$/.test(apiUrl)) {
+    useFallback("Apps Script URL has not been configured.", config);
+    return;
+  }
+
+  setStatus("Loading vault data…");
+
+  try {
+    applyData(await fetchJson(apiUrl), "live");
+    return;
+  } catch (error) {
+    console.warn("Normal JSON request failed. Trying JSONP.", error);
+  }
+
+  try {
+    applyData(await fetchJsonp(apiUrl), "live");
+  } catch (error) {
+    console.error("Both API loading methods failed.", error);
+    useFallback(error.message, config);
+  }
+}
+
+function useFallback(message, config = {}) {
+  console.error(message);
+
+  if (config.useFallbackData !== false && window.BOURBON_DATA) {
+    try {
+      applyData(window.BOURBON_DATA, "fallback");
+      setStatus("Live Sheet unavailable · showing bundled snapshot", "error");
+      showToast(message, "error");
+      return;
+    } catch (error) {
+      console.error("Fallback data is invalid.", error);
+    }
+  }
+
+  setStatus("Unable to load Google Sheets data.", "error");
+  if (els.lastUpdated) els.lastUpdated.textContent = "";
   showToast(message, "error");
-  return;
-} catch (error) {
-  console.error("Fallback data is invalid:", error);
-}
-```
-
 }
 
-if (elements.dataStatus) {
-elements.dataStatus.textContent =
-"Unable to load Google Sheets data.";
-elements.dataStatus.className = "data-status error";
-}
-
-if (elements.lastUpdated) {
-elements.lastUpdated.textContent = "";
-}
-
-showToast(message, "error");
+function renderEverything() {
+  renderDashboard();
+  renderCollection();
+  renderWishlist();
+  renderCatalog();
 }
 
 function renderDashboard() {
-renderDashboardMetrics();
-renderStatusSummary();
-renderHuntSummary();
-renderRecentBottles();
+  renderDashboardMetrics();
+  renderStatusSummary();
+  renderHuntSummary();
+  renderRecentBottles();
 }
 
 function renderDashboardMetrics() {
-if (!elements.dashboardMetrics) {
-return;
-}
+  if (!els.dashboardMetrics) return;
+  const { dashboard, inventory, wishlist, catalog } = state.data;
+  const statuses = dashboard.statuses || {};
+  const openCount = firstNumber(statuses.open, statuses.opened) ?? inventory.filter(item => ["open", "opened"].includes(lower(item.status))).length;
+  const finishedCount = firstNumber(statuses.finished) ?? inventory.filter(item => lower(item.status) === "finished").length;
+  const collectionValue = firstNumber(dashboard.estimatedCollectionValue, dashboard.collectionValue, dashboard.totalValue) ?? inventory.reduce((sum, item) => sum + (item.estimatedValue ?? item.msrp ?? 0), 0);
 
-const dashboard = vaultData.dashboard || {};
+  const metrics = [
+    ["Collection", inventory.length, `${unique(inventory.map(item => item.distillery)).length} distilleries`],
+    ["Open", openCount, "Bottles currently open"],
+    ["Wishlist", wishlist.length, "Active hunting targets"],
+    ["Finished", finishedCount, "Completed bottles"],
+    ["Favorites", inventory.filter(item => item.favorite).length, "Marked favorites"],
+    ["Average Proof", average(inventory.map(item => item.proof)).toFixed(1), "Across recorded bottles"],
+    ["Estimated Value", collectionValue ? money.format(collectionValue) : "—", "Recorded collection value"],
+    ["Catalog", catalog.length, "Master bottle records"]
+  ];
 
-const totalBottles =
-numberOrNull(dashboard.totalBottles) ??
-vaultData.inventory.length;
-
-const openBottles =
-numberOrNull(dashboard.statuses && dashboard.statuses.open) ??
-vaultData.inventory.filter(item => lower(item.status) === "open").length;
-
-const finishedBottles =
-numberOrNull(dashboard.statuses && dashboard.statuses.finished) ??
-vaultData.inventory.filter(item => lower(item.status) === "finished").length;
-
-const wishlistItems =
-numberOrNull(dashboard.totalWishlistItems) ??
-vaultData.wishlist.length;
-
-const favorites =
-numberOrNull(dashboard.favorites) ??
-vaultData.inventory.filter(item => item.favorite === true).length;
-
-const estimatedValue =
-numberOrNull(dashboard.estimatedCollectionValue);
-
-const averageProof =
-numberOrNull(dashboard.averageProof) ??
-calculateAverage(
-vaultData.inventory
-.map(item => numberOrNull(item.proof))
-.filter(value => value != null)
-);
-
-const distilleries =
-unique(vaultData.inventory.map(item => item.distillery)).length;
-
-const metrics = [
-{
-label: "Collection",
-value: wholeNumber.format(totalBottles),
-note: `${distilleries} distilleries`
-},
-{
-label: "Open",
-value: wholeNumber.format(openBottles),
-note: "Bottles currently open"
-},
-{
-label: "Wishlist",
-value: wholeNumber.format(wishlistItems),
-note: "Active hunting targets"
-},
-{
-label: "Finished",
-value: wholeNumber.format(finishedBottles),
-note: "Completed bottles"
-},
-{
-label: "Favorites",
-value: wholeNumber.format(favorites),
-note: "Marked favorites"
-},
-{
-label: "Average Proof",
-value: averageProof ? averageProof.toFixed(1) : "—",
-note: "Across recorded bottles"
-},
-{
-label: "Estimated Value",
-value:
-estimatedValue == null
-? "—"
-: money.format(estimatedValue),
-note: "Recorded collection value"
-},
-{
-label: "Catalog",
-value: wholeNumber.format(vaultData.catalog.length),
-note: "Master bottle records"
-}
-];
-
-elements.dashboardMetrics.innerHTML = metrics
-.map(metric => `       <article class="metric">         <span>${escapeHtml(metric.label)}</span>         <strong>${escapeHtml(metric.value)}</strong>         <small>${escapeHtml(metric.note)}</small>       </article>
-    `)
-.join("");
+  els.dashboardMetrics.innerHTML = metrics.map(([label, value, note]) => `
+    <article class="metric"><span>${html(label)}</span><strong>${html(value)}</strong><small>${html(note)}</small></article>
+  `).join("");
 }
 
 function renderStatusSummary() {
-if (!elements.statusSummary) {
-return;
-}
-
-const statuses = [
-"Sealed",
-"Open",
-"Finished",
-"Gifted",
-"Traded",
-"Archived"
-];
-
-const dashboardStatuses =
-vaultData.dashboard && vaultData.dashboard.statuses
-? vaultData.dashboard.statuses
-: {};
-
-elements.statusSummary.innerHTML = statuses
-.map(status => {
-const key = lower(status);
-
-```
-  const count =
-    numberOrNull(dashboardStatuses[key]) ??
-    vaultData.inventory.filter(
-      item => lower(item.status) === key
-    ).length;
-
-  return `
-    <div class="status-summary-item">
-      <span>${escapeHtml(status)}</span>
-      <strong>${wholeNumber.format(count)}</strong>
-    </div>
-  `;
-})
-.join("");
-```
-
-}
-
-function renderHuntSummary() {
-if (!elements.huntSummary) {
-return;
-}
-
-const dashboard = vaultData.dashboard || {};
-
-const mustFind =
-numberOrNull(dashboard.mustFindItems) ??
-vaultData.wishlist.filter(
-item => lower(item.priority) === "must find"
-).length;
-
-const safeToBuy = vaultData.wishlist.filter(
-item => !isAlreadyOwned(item)
-).length;
-
-const alreadyOwned =
-numberOrNull(dashboard.alreadyOwnedWishlistItems) ??
-vaultData.wishlist.filter(isAlreadyOwned).length;
-
-const huntStops =
-numberOrNull(dashboard.huntStops) ??
-vaultData.hunts.length;
-
-const values = [
-["Must-find bottles", mustFind],
-["Safe-to-buy targets", safeToBuy],
-["Already owned", alreadyOwned],
-["Recorded hunt stops", huntStops]
-];
-
-elements.huntSummary.innerHTML = values
-.map(([label, value]) => `       <div class="hunt-summary-item">         <span>${escapeHtml(label)}</span>         <strong>${wholeNumber.format(value)}</strong>       </div>
-    `)
-.join("");
-}
-
-function renderRecentBottles() {
-if (!elements.recentBottles) {
-return;
-}
-
-const recent = [...vaultData.inventory]
-.sort((a, b) => {
-const dateDifference =
-dateValue(b.dateAdded) - dateValue(a.dateAdded);
-
-```
-  if (dateDifference !== 0) {
-    return dateDifference;
-  }
-
-  return text(b.inventoryId || b.id)
-    .localeCompare(text(a.inventoryId || a.id));
-})
-.slice(0, 4);
-```
-
-if (!recent.length) {
-elements.recentBottles.innerHTML =
-`<p class="empty-state">No inventory records are available.</p>`;
-return;
-}
-
-elements.recentBottles.innerHTML = recent
-.map(item => ` <button
-     class="recent-bottle"
-     type="button"
-     data-record-type="inventory"
-     data-record-id="${escapeAttribute(item.inventoryId || item.id)}"
-   > <span class="status ${slug(item.status)}">
-${escapeHtml(item.status || "Unknown")} </span>
-
-```
-    <h4>${escapeHtml(item.expression || "Unnamed bottle")}</h4>
-
-    <p>
-      ${escapeHtml(item.brand || "")}
-      ${item.dateAdded ? ` · ${escapeHtml(formatDate(item.dateAdded))}` : ""}
-    </p>
-  </button>
-`)
-.join("");
-```
-
-bindDetailButtons(elements.recentBottles);
-}
-
-function getFilteredInventory() {
-const query = lower(collectionFilters.search && collectionFilters.search.value);
-const status = text(collectionFilters.status && collectionFilters.status.value);
-const distillery = text(
-collectionFilters.distillery && collectionFilters.distillery.value
-);
-const category = text(
-collectionFilters.category && collectionFilters.category.value
-);
-
-const rows = vaultData.inventory.filter(item => {
-const haystack = [
-item.brand,
-item.expression,
-item.distillery,
-item.release,
-item.mashBill,
-item.shelf,
-item.category,
-item.releaseType,
-item.catalogId,
-item.inventoryId,
-item.id
-]
-.map(text)
-.join(" ")
-.toLowerCase();
-
-```
-return (
-  (!query || haystack.includes(query)) &&
-  (!status || item.status === status) &&
-  (!distillery || item.distillery === distillery) &&
-  (!category || item.category === category)
-);
-```
-
-});
-
-return rows.sort((a, b) => {
-switch (collectionFilters.sort && collectionFilters.sort.value) {
-case "date-desc":
-return dateValue(b.dateAdded) - dateValue(a.dateAdded);
-
-```
-  case "proof-desc":
-    return (numberOrNull(b.proof) || 0) -
-      (numberOrNull(a.proof) || 0);
-
-  case "proof-asc":
-    return (numberOrNull(a.proof) || 0) -
-      (numberOrNull(b.proof) || 0);
-
-  case "msrp-desc":
-    return (numberOrNull(b.msrp) || 0) -
-      (numberOrNull(a.msrp) || 0);
-
-  case "rating-desc":
-    return (numberOrNull(b.rating) || 0) -
-      (numberOrNull(a.rating) || 0);
-
-  default:
-    return `${text(a.brand)} ${text(a.expression)}`
-      .localeCompare(`${text(b.brand)} ${text(b.expression)}`);
-}
-```
-
-});
-}
-
-function renderCollection() {
-if (!elements.collectionGrid) {
-return;
-}
-
-const rows = getFilteredInventory();
-
-elements.collectionCount.textContent =
-`${rows.length} of ${vaultData.inventory.length} bottles`;
-
-elements.collectionEmpty.hidden = rows.length !== 0;
-
-elements.collectionGrid.innerHTML = rows
-.map(item => renderBottleCard(item, "inventory"))
-.join("");
-
-bindDetailButtons(elements.collectionGrid);
-bindImageFallbacks(elements.collectionGrid);
-}
-
-function renderBottleCard(item, recordType) {
-const identifier =
-recordType === "catalog"
-? item.catalogId
-: item.inventoryId || item.id;
-
-const status =
-recordType === "inventory"
-? text(item.status)
-: "";
-
-const image = text(item.image);
-
-return `    <article class="bottle-card">
-      ${
-        item.favorite
-          ?`<span class="favorite-marker" title="Favorite" aria-label="Favorite">★</span>`
-: ""
-}
-
-```
-  <button
-    class="bottle-card-button"
-    type="button"
-    data-record-type="${escapeAttribute(recordType)}"
-    data-record-id="${escapeAttribute(identifier)}"
-  >
-    <div class="bottle-image-wrap">
-      ${
-        image
-          ? `
-            <img
-              class="bottle-image"
-              src="${escapeAttribute(image)}"
-              alt="${escapeAttribute(
-                `${item.brand || ""} ${item.expression || ""}`.trim()
-              )}"
-              loading="lazy"
-            >
-          `
-          : bottlePlaceholder(item.brand)
-      }
-    </div>
-
-    <div class="bottle-card-content">
-      <div class="card-top">
-        <div>
-          <p class="brand-name">
-            ${escapeHtml(item.brand || "Unknown brand")}
-          </p>
-
-          <h3 class="expression-name">
-            ${escapeHtml(item.expression || "Unnamed expression")}
-          </h3>
-
-          ${
-            item.release
-              ? `<p class="release-name">${escapeHtml(item.release)}</p>`
-              : ""
-          }
-        </div>
-
-        <span class="proof">
-          ${escapeHtml(formatProof(item.proof))}
-        </span>
-      </div>
-
-      <div class="card-bottom">
-        <p class="meta">
-          ${escapeHtml(item.distillery || "Distillery unknown")}
-          <br>
-          ${escapeHtml(
-            firstNonBlank(
-              item.category,
-              item.mashBill,
-              item.releaseType,
-              "Additional details unavailable"
-            )
-          )}
-        </p>
-
-        ${
-          status
-            ? `
-              <span class="status ${slug(status)}">
-                ${escapeHtml(status)}
-              </span>
-            `
-            : item.releaseType
-              ? `
-                <span class="catalog-badge">
-                  ${escapeHtml(item.releaseType)}
-                </span>
-              `
-              : ""
-        }
-      </div>
-    </div>
-  </button>
-</article>
-```
-
-`;
-}
-
-function bottlePlaceholder(brand) {
-const initials = text(brand)
-.split(/\s+/)
-.filter(Boolean)
-.slice(0, 2)
-.map(word => word.charAt(0).toUpperCase())
-.join("") || "BV";
-
-return `     <div
-      class="bottle-image-placeholder"
-      aria-label="Bottle image unavailable"     >
-      ${escapeHtml(initials)}     </div>
-  `;
-}
-
-function getFilteredWishlist() {
-const query = lower(wishlistFilters.search && wishlistFilters.search.value);
-const priority = text(
-wishlistFilters.priority && wishlistFilters.priority.value
-);
-const status = text(
-wishlistFilters.status && wishlistFilters.status.value
-);
-const duplicate = text(
-wishlistFilters.duplicate && wishlistFilters.duplicate.value
-);
-
-const rows = vaultData.wishlist.filter(item => {
-const haystack = [
-item.brand,
-item.expression,
-item.distillery,
-item.release,
-item.category,
-item.releaseType,
-item.notes,
-item.whereSeen
-]
-.map(text)
-.join(" ")
-.toLowerCase();
-
-```
-const alreadyOwned = isAlreadyOwned(item);
-
-return (
-  (!query || haystack.includes(query)) &&
-  (!priority || item.priority === priority) &&
-  (!status || item.status === status) &&
-  (
-    !duplicate ||
-    (duplicate === "owned" && alreadyOwned) ||
-    (duplicate === "safe" && !alreadyOwned)
-  )
-);
-```
-
-});
-
-return rows.sort((a, b) => {
-switch (wishlistFilters.sort && wishlistFilters.sort.value) {
-case "brand":
-return `${text(a.brand)} ${text(a.expression)}`
-.localeCompare(`${text(b.brand)} ${text(b.expression)}`);
-
-```
-  case "buy-under-asc":
-    return sortableMoney(a.buyUnder) - sortableMoney(b.buyUnder);
-
-  case "absolute-max-asc":
-    return sortableMoney(a.absoluteMax ?? a.maxPrice) -
-      sortableMoney(b.absoluteMax ?? b.maxPrice);
-
-  case "msrp-asc":
-    return sortableMoney(a.msrp) - sortableMoney(b.msrp);
-
-  default:
-    return getPriorityRank(a.priority) - getPriorityRank(b.priority) ||
-      `${text(a.brand)} ${text(a.expression)}`
-        .localeCompare(`${text(b.brand)} ${text(b.expression)}`);
-}
-```
-
-});
-}
-
-function sortableMoney(value) {
-const amount = numberOrNull(value);
-return amount == null ? Number.MAX_SAFE_INTEGER : amount;
-}
-
-function getPriorityRank(priority) {
-return priorityRank[lower(priority)] || 99;
+  if (!els.statusSummary) return;
+  const statuses = ["Sealed", "Open", "Finished", "Gifted", "Traded", "Archived"];
+
+  els.statusSummary.innerHTML = statuses.map(status => {
+    const key = lower(status);
+    const count = state.data.inventory.filter(item => {
+      const itemStatus = lower(item.status);
+      return key === "open" ? ["open", "opened"].includes(itemStatus) : itemStatus === key;
+    }).length;
+
+    return `<div class="status-summary-item"><span>${html(status)}</span><strong>${integer.format(count)}</strong></div>`;
+  }).join("");
 }
 
 function isAlreadyOwned(item) {
-return (
-lower(item.duplicateCheck).includes("already owned") ||
-numberOrNull(item.ownedQty) > 0
-);
+  return lower(item.duplicateCheck).includes("already owned") || (item.ownedQty ?? 0) > 0;
+}
+
+function renderHuntSummary() {
+  if (!els.huntSummary) return;
+  const values = [
+    ["Must-find bottles", state.data.wishlist.filter(item => ["must find", "must-have"].includes(lower(item.priority))).length],
+    ["Safe-to-buy targets", state.data.wishlist.filter(item => !isAlreadyOwned(item)).length],
+    ["Already owned", state.data.wishlist.filter(isAlreadyOwned).length],
+    ["Recorded hunt stops", state.data.hunts.length]
+  ];
+
+  els.huntSummary.innerHTML = values.map(([label, value]) => `
+    <div class="hunt-summary-item"><span>${html(label)}</span><strong>${integer.format(value)}</strong></div>
+  `).join("");
+}
+
+function renderRecentBottles() {
+  if (!els.recentBottles) return;
+  const rows = [...state.data.inventory].sort((a, b) => parseDate(b.dateAdded) - parseDate(a.dateAdded)).slice(0, 4);
+
+  if (!rows.length) {
+    els.recentBottles.innerHTML = `<p class="empty-state">No inventory records are available.</p>`;
+    return;
+  }
+
+  els.recentBottles.innerHTML = rows.map(item => `
+    <button class="recent-bottle" type="button" data-record-type="inventory" data-record-id="${attr(normalizedId(item, "inventory"))}">
+      <span class="status ${slug(item.status)}">${html(item.status || "Unknown")}</span>
+      <h4>${html(item.expression || "Unnamed bottle")}</h4>
+      <p>${html(item.brand || "")}${item.dateAdded ? ` · ${html(formatDate(item.dateAdded))}` : ""}</p>
+    </button>
+  `).join("");
+
+  bindRecordButtons(els.recentBottles);
+}
+
+function filteredInventory() {
+  const query = lower(collectionFilters.search?.value);
+  const status = str(collectionFilters.status?.value);
+  const distillery = str(collectionFilters.distillery?.value);
+  const category = str(collectionFilters.category?.value);
+
+  const rows = state.data.inventory.filter(item => {
+    const haystack = [item.brand, item.expression, item.distillery, item.release, item.mashBill, item.shelf, item.category, item.releaseType, item.catalogId, item.inventoryId, item.id].map(str).join(" ").toLowerCase();
+    return (!query || haystack.includes(query)) && (!status || item.status === status) && (!distillery || item.distillery === distillery) && (!category || item.category === category);
+  });
+
+  return rows.sort((a, b) => {
+    switch (collectionFilters.sort?.value) {
+      case "date-desc": return parseDate(b.dateAdded) - parseDate(a.dateAdded);
+      case "proof-desc": return (b.proof ?? 0) - (a.proof ?? 0);
+      case "proof-asc": return (a.proof ?? 0) - (b.proof ?? 0);
+      case "msrp-desc": return (b.msrp ?? 0) - (a.msrp ?? 0);
+      case "rating-desc": return (b.rating ?? 0) - (a.rating ?? 0);
+      default: return `${a.brand} ${a.expression}`.localeCompare(`${b.brand} ${b.expression}`);
+    }
+  });
+}
+
+function bottlePlaceholder(brand) {
+  const initials = str(brand).split(/\s+/).filter(Boolean).slice(0, 2).map(word => word.charAt(0).toUpperCase()).join("") || "BV";
+  return `<div class="bottle-image-placeholder" aria-label="Bottle image unavailable">${html(initials)}</div>`;
+}
+
+function renderBottleCard(item, type) {
+  const id = normalizedId(item, type);
+  const image = str(item.image);
+  const status = type === "inventory" ? str(item.status) : "";
+
+  return `
+    <article class="bottle-card">
+      ${item.favorite ? `<span class="favorite-marker" aria-label="Favorite">★</span>` : ""}
+      <button class="bottle-card-button" type="button" data-record-type="${attr(type)}" data-record-id="${attr(id)}">
+        <div class="bottle-image-wrap">
+          ${image ? `<img class="bottle-image" src="${attr(image)}" alt="${attr(`${item.brand} ${item.expression}`)}" loading="lazy">` : bottlePlaceholder(item.brand)}
+        </div>
+        <div class="bottle-card-content">
+          <div class="card-top">
+            <div>
+              <p class="brand-name">${html(item.brand || "Unknown brand")}</p>
+              <h3 class="expression-name">${html(item.expression || "Unnamed expression")}</h3>
+              ${item.release ? `<p class="release-name">${html(item.release)}</p>` : ""}
+            </div>
+            <span class="proof">${html(formatProof(item.proof))}</span>
+          </div>
+          <div class="card-bottom">
+            <p class="meta">${html(item.distillery || "Distillery unknown")}<br>${html(firstValue(item.category, item.mashBill, item.releaseType, "Additional details unavailable"))}</p>
+            ${status ? `<span class="status ${slug(status)}">${html(status)}</span>` : item.releaseType ? `<span class="catalog-badge">${html(item.releaseType)}</span>` : ""}
+          </div>
+        </div>
+      </button>
+    </article>
+  `;
+}
+
+function renderCollection() {
+  if (!els.collectionGrid) return;
+  const rows = filteredInventory();
+  if (els.collectionCount) els.collectionCount.textContent = `${rows.length} of ${state.data.inventory.length} bottles`;
+  if (els.collectionEmpty) els.collectionEmpty.hidden = rows.length !== 0;
+  els.collectionGrid.innerHTML = rows.map(item => renderBottleCard(item, "inventory")).join("");
+  bindRecordButtons(els.collectionGrid);
+  bindImageFallbacks(els.collectionGrid);
+}
+
+function sortablePrice(value) {
+  return num(value) ?? Number.MAX_SAFE_INTEGER;
+}
+
+function getPriorityRank(value) {
+  return priorityRank[lower(value)] || 99;
+}
+
+function filteredWishlist() {
+  const query = lower(wishlistFilters.search?.value);
+  const priority = str(wishlistFilters.priority?.value);
+  const status = str(wishlistFilters.status?.value);
+  const duplicate = str(wishlistFilters.duplicate?.value);
+
+  const rows = state.data.wishlist.filter(item => {
+    const haystack = [item.brand, item.expression, item.distillery, item.release, item.category, item.releaseType, item.notes, item.whereSeen].map(str).join(" ").toLowerCase();
+    const owned = isAlreadyOwned(item);
+    return (!query || haystack.includes(query)) && (!priority || item.priority === priority) && (!status || item.status === status) && (!duplicate || (duplicate === "owned" && owned) || (duplicate === "safe" && !owned));
+  });
+
+  return rows.sort((a, b) => {
+    switch (wishlistFilters.sort?.value) {
+      case "brand": return `${a.brand} ${a.expression}`.localeCompare(`${b.brand} ${b.expression}`);
+      case "buy-under-asc": return sortablePrice(a.buyUnder) - sortablePrice(b.buyUnder);
+      case "absolute-max-asc": return sortablePrice(a.absoluteMax) - sortablePrice(b.absoluteMax);
+      case "msrp-asc": return sortablePrice(a.msrp) - sortablePrice(b.msrp);
+      default: return getPriorityRank(a.priority) - getPriorityRank(b.priority) || `${a.brand} ${a.expression}`.localeCompare(`${b.brand} ${b.expression}`);
+    }
+  });
 }
 
 function renderWishlist() {
-if (!elements.wishlistGrid) {
-return;
+  if (!els.wishlistGrid) return;
+  const rows = filteredWishlist();
+  if (els.wishlistCount) els.wishlistCount.textContent = `${rows.length} of ${state.data.wishlist.length} active targets`;
+  if (els.wishlistEmpty) els.wishlistEmpty.hidden = rows.length !== 0;
+
+  els.wishlistGrid.innerHTML = rows.map(item => {
+    const owned = isAlreadyOwned(item);
+    return `
+      <article class="wish-card" tabindex="0" role="button" data-record-type="wishlist" data-record-id="${attr(normalizedId(item, "wishlist"))}">
+        <div class="wish-card-main">
+          <p class="eyebrow">${html(item.brand || "Unknown brand")}</p>
+          <h3>${html(item.expression || "Unnamed expression")}</h3>
+          <p>${html(item.distillery || "Distillery unknown")}${item.release ? ` · ${html(item.release)}` : ""}</p>
+        </div>
+        <div class="wish-field"><span>Priority</span><strong><span class="priority-badge ${slug(item.priority)}">${html(item.priority || "Not set")}</span></strong></div>
+        <div class="wish-field"><span>MSRP</span><strong>${html(formatMoney(item.msrp))}</strong></div>
+        <div class="wish-field"><span>Buy under</span><strong>${html(formatMoney(item.buyUnder))}</strong></div>
+        <div class="wish-field"><span>Absolute max</span><strong>${html(formatMoney(item.absoluteMax))}</strong></div>
+        <div class="wish-field"><span>Buy status</span><strong class="${owned ? "owned" : "safe"}">${owned ? "Already owned" : "Safe to buy"}</strong></div>
+        <div class="wish-field"><span>Hunt status</span><strong>${html(item.status || "Searching")}</strong></div>
+      </article>
+    `;
+  }).join("");
+
+  bindRecordButtons(els.wishlistGrid);
 }
 
-const rows = getFilteredWishlist();
+function filteredCatalog() {
+  const query = lower(catalogFilters.search?.value);
+  const distillery = str(catalogFilters.distillery?.value);
+  const category = str(catalogFilters.category?.value);
+  const releaseType = str(catalogFilters.releaseType?.value);
 
-elements.wishlistCount.textContent =
-`${rows.length} of ${vaultData.wishlist.length} active targets`;
-
-elements.wishlistEmpty.hidden = rows.length !== 0;
-
-elements.wishlistGrid.innerHTML = rows
-.map(item => {
-const owned = isAlreadyOwned(item);
-const maximum = item.absoluteMax ?? item.maxPrice;
-
-```
-  return `
-    <article
-      class="wish-card"
-      data-record-type="wishlist"
-      data-record-id="${escapeAttribute(item.wishId || item.id)}"
-    >
-      <div class="wish-card-main">
-        <p class="eyebrow">
-          ${escapeHtml(item.brand || "Unknown brand")}
-        </p>
-
-        <h3>${escapeHtml(item.expression || "Unnamed expression")}</h3>
-
-        <p>
-          ${escapeHtml(item.distillery || "Distillery unknown")}
-          ${item.release ? ` · ${escapeHtml(item.release)}` : ""}
-        </p>
-      </div>
-
-      <div class="wish-field">
-        <span>Priority</span>
-        <strong>
-          <span class="priority-badge ${slug(item.priority)}">
-            ${escapeHtml(item.priority || "Not set")}
-          </span>
-        </strong>
-      </div>
-
-      <div class="wish-field">
-        <span>MSRP</span>
-        <strong>${escapeHtml(formatMoney(item.msrp, "—"))}</strong>
-      </div>
-
-      <div class="wish-field">
-        <span>Buy under</span>
-        <strong>${escapeHtml(formatMoney(item.buyUnder, "—"))}</strong>
-      </div>
-
-      <div class="wish-field">
-        <span>Absolute max</span>
-        <strong>${escapeHtml(formatMoney(maximum, "—"))}</strong>
-      </div>
-
-      <div class="wish-field">
-        <span>Buy status</span>
-        <strong class="${owned ? "owned" : "safe"}">
-          ${owned ? "Already owned" : "Safe to buy"}
-        </strong>
-      </div>
-
-      <div class="wish-field">
-        <span>Hunt status</span>
-        <strong>${escapeHtml(item.status || "Searching")}</strong>
-      </div>
-    </article>
-  `;
-})
-.join("");
-```
-
-elements.wishlistGrid
-.querySelectorAll(".wish-card")
-.forEach(card => {
-card.tabIndex = 0;
-card.setAttribute("role", "button");
-
-```
-  card.addEventListener("click", () => {
-    openRecord(
-      card.dataset.recordType,
-      card.dataset.recordId
-    );
+  const rows = state.data.catalog.filter(item => {
+    const haystack = [item.brand, item.expression, item.distillery, item.release, item.category, item.releaseType, item.mashBill, item.catalogId].map(str).join(" ").toLowerCase();
+    return (!query || haystack.includes(query)) && (!distillery || item.distillery === distillery) && (!category || item.category === category) && (!releaseType || item.releaseType === releaseType);
   });
 
-  card.addEventListener("keydown", event => {
-    if (event.key === "Enter" || event.key === " ") {
-      event.preventDefault();
-      card.click();
+  return rows.sort((a, b) => {
+    switch (catalogFilters.sort?.value) {
+      case "proof-desc": return (b.proof ?? 0) - (a.proof ?? 0);
+      case "msrp-desc": return (b.msrp ?? 0) - (a.msrp ?? 0);
+      default: return `${a.brand} ${a.expression}`.localeCompare(`${b.brand} ${b.expression}`);
     }
   });
-});
-```
-
-}
-
-function getFilteredCatalog() {
-const query = lower(catalogFilters.search && catalogFilters.search.value);
-const distillery = text(
-catalogFilters.distillery && catalogFilters.distillery.value
-);
-const category = text(
-catalogFilters.category && catalogFilters.category.value
-);
-const releaseType = text(
-catalogFilters.releaseType && catalogFilters.releaseType.value
-);
-
-const rows = vaultData.catalog.filter(item => {
-const haystack = [
-item.brand,
-item.expression,
-item.distillery,
-item.release,
-item.category,
-item.releaseType,
-item.mashBill,
-item.catalogId
-]
-.map(text)
-.join(" ")
-.toLowerCase();
-
-```
-return (
-  (!query || haystack.includes(query)) &&
-  (!distillery || item.distillery === distillery) &&
-  (!category || item.category === category) &&
-  (!releaseType || item.releaseType === releaseType)
-);
-```
-
-});
-
-return rows.sort((a, b) => {
-switch (catalogFilters.sort && catalogFilters.sort.value) {
-case "proof-desc":
-return (numberOrNull(b.proof) || 0) -
-(numberOrNull(a.proof) || 0);
-
-```
-  case "msrp-desc":
-    return (numberOrNull(b.msrp) || 0) -
-      (numberOrNull(a.msrp) || 0);
-
-  default:
-    return `${text(a.brand)} ${text(a.expression)}`
-      .localeCompare(`${text(b.brand)} ${text(b.expression)}`);
-}
-```
-
-});
 }
 
 function renderCatalog() {
-if (!elements.catalogGrid) {
-return;
+  if (!els.catalogGrid) return;
+  const rows = filteredCatalog();
+  if (els.catalogCount) els.catalogCount.textContent = `${rows.length} of ${state.data.catalog.length} catalog records`;
+  if (els.catalogEmpty) els.catalogEmpty.hidden = rows.length !== 0;
+  els.catalogGrid.innerHTML = rows.map(item => renderBottleCard(item, "catalog")).join("");
+  bindRecordButtons(els.catalogGrid);
+  bindImageFallbacks(els.catalogGrid);
 }
 
-const rows = getFilteredCatalog();
+function bindRecordButtons(container) {
+  if (!container) return;
 
-elements.catalogCount.textContent =
-`${rows.length} of ${vaultData.catalog.length} catalog records`;
+  container.querySelectorAll("[data-record-type][data-record-id]").forEach(element => {
+    const open = () => openRecord(element.dataset.recordType, element.dataset.recordId);
+    element.addEventListener("click", open);
 
-elements.catalogEmpty.hidden = rows.length !== 0;
-
-elements.catalogGrid.innerHTML = rows
-.map(item => renderBottleCard(item, "catalog"))
-.join("");
-
-bindDetailButtons(elements.catalogGrid);
-bindImageFallbacks(elements.catalogGrid);
-}
-
-function bindDetailButtons(container) {
-if (!container) {
-return;
-}
-
-container
-.querySelectorAll("[data-record-type][data-record-id]")
-.forEach(button => {
-button.addEventListener("click", () => {
-openRecord(
-button.dataset.recordType,
-button.dataset.recordId
-);
-});
-});
+    if (element.getAttribute("role") === "button") {
+      element.addEventListener("keydown", event => {
+        if (event.key === "Enter" || event.key === " ") {
+          event.preventDefault();
+          open();
+        }
+      });
+    }
+  });
 }
 
 function bindImageFallbacks(container) {
-container
-.querySelectorAll("img.bottle-image")
-.forEach(image => {
-image.addEventListener(
-"error",
-() => {
-image.replaceWith(
-createPlaceholderElement(
-image.alt.split(" ")[0] || "BV"
-)
-);
-},
-{ once: true }
-);
-});
+  if (!container) return;
+  container.querySelectorAll("img.bottle-image").forEach(image => {
+    image.addEventListener("error", () => image.replaceWith(createPlaceholder(image.alt || "BV")), { once: true });
+  });
 }
 
-function createPlaceholderElement(brand) {
-const wrapper = document.createElement("div");
-wrapper.innerHTML = bottlePlaceholder(brand);
-return wrapper.firstElementChild;
+function createPlaceholder(label) {
+  const wrapper = document.createElement("div");
+  wrapper.innerHTML = bottlePlaceholder(label);
+  return wrapper.firstElementChild;
 }
 
-function openRecord(recordType, recordId) {
-let item = null;
-
-if (recordType === "inventory") {
-item = vaultData.inventory.find(
-row => text(row.inventoryId || row.id) === text(recordId)
-);
+function findRecord(type, id) {
+  const source = type === "catalog" ? state.data.catalog : type === "wishlist" ? state.data.wishlist : state.data.inventory;
+  return source.find(item => normalizedId(item, type) === str(id));
 }
 
-if (recordType === "wishlist") {
-item = vaultData.wishlist.find(
-row => text(row.wishId || row.id) === text(recordId)
-);
+function openRecord(type, id) {
+  const item = findRecord(type, id);
+  if (!item) {
+    showToast("That bottle record could not be found.", "error");
+    return;
+  }
+  openDialog(item, type);
 }
 
-if (recordType === "catalog") {
-item = vaultData.catalog.find(
-row => text(row.catalogId) === text(recordId)
-);
-}
+function openDialog(item, type) {
+  if (!els.dialog || !els.dialogContent) return;
 
-if (!item) {
-showToast("That bottle record could not be found.", "error");
-return;
-}
+  const common = [
+    ["Distillery", item.distillery || "Not recorded"],
+    ["Proof", formatProof(item.proof)],
+    ["Batch / Release", item.release || "Not recorded"],
+    ["Category", item.category || "Not recorded"],
+    ["Release Type", item.releaseType || "Not recorded"],
+    ["MSRP", formatMoney(item.msrp, "Not recorded")]
+  ];
 
-openBottleDialog(item, recordType);
-}
+  let details = common;
 
-function openBottleDialog(item, recordType) {
-if (!elements.dialog || !elements.dialogContent) {
-return;
-}
+  if (type === "inventory") {
+    details = [...common, ["Age", formatAge(item.age)], ["Mash Bill", item.mashBill || "Unknown"], ["Bottle Size", item.size || "Not recorded"], ["Status", item.status || "Not recorded"], ["Fill Level", formatFill(item.fill)], ["Shelf", item.shelf || "Not recorded"], ["Estimated Value", formatMoney(item.estimatedValue, "Not recorded")], ["Personal Rating", item.rating ?? "Not rated"], ["Date Added", formatDate(item.dateAdded)], ["Finished Date", formatDate(item.finishedDate)], ["Inventory ID", normalizedId(item, "inventory") || "Not recorded"], ["Catalog ID", item.catalogId || "Not recorded"], ["Notes", item.notes || "No notes"]];
+  }
 
-const image = text(item.image);
+  if (type === "wishlist") {
+    details = [...common, ["Priority", item.priority || "Not set"], ["Hunt Status", item.status || "Searching"], ["Buy Under", formatMoney(item.buyUnder, "Not recorded")], ["Absolute Max", formatMoney(item.absoluteMax, "Not recorded")], ["Duplicate Check", isAlreadyOwned(item) ? "Already owned" : "Safe to buy"], ["Owned Quantity", item.ownedQty ?? 0], ["Last Seen", formatDate(item.lastSeenDate)], ["Where Seen", item.whereSeen || "Not recorded"], ["Wish ID", normalizedId(item, "wishlist") || "Not recorded"], ["Catalog ID", item.catalogId || "Not recorded"], ["Notes", item.notes || "No notes"]];
+  }
 
-let details = [];
+  if (type === "catalog") {
+    details = [...common, ["Age", formatAge(item.age)], ["Mash Bill", item.mashBill || "Unknown"], ["Bottle Size", item.size || "Not recorded"], ["Catalog ID", normalizedId(item, "catalog") || "Not recorded"]];
+  }
 
-if (recordType === "inventory") {
-details = [
-["Distillery", item.distillery || "Not recorded"],
-["Proof", formatProof(item.proof)],
-["Batch / Release", item.release || "Not recorded"],
-["Age", formatAge(item.age)],
-["Mash Bill", item.mashBill || "Unknown"],
-["Category", item.category || "Not recorded"],
-["Release Type", item.releaseType || "Not recorded"],
-["Bottle Size", item.size || "Not recorded"],
-["Status", item.status || "Not recorded"],
-["Fill Level", formatFill(item.fill)],
-["Shelf", item.shelf || "Not recorded"],
-["MSRP", formatMoney(item.msrp)],
-["Estimated Value", formatMoney(item.estimatedValue)],
-["Personal Rating", item.rating || "Not rated"],
-["Date Added", formatDate(item.dateAdded)],
-["Finished Date", formatDate(item.finishedDate)],
-["Rebuy?", item.rebuy || "Not recorded"],
-["Inventory ID", item.inventoryId || item.id || "Not recorded"],
-["Catalog ID", item.catalogId || "Not recorded"],
-["Notes", item.notes || "No notes"]
-];
-}
-
-if (recordType === "wishlist") {
-details = [
-["Distillery", item.distillery || "Not recorded"],
-["Proof", formatProof(item.proof)],
-["Batch / Release", item.release || "Not recorded"],
-["Category", item.category || "Not recorded"],
-["Release Type", item.releaseType || "Not recorded"],
-["Priority", item.priority || "Not set"],
-["Hunt Status", item.status || "Searching"],
-["MSRP", formatMoney(item.msrp)],
-["Buy Under", formatMoney(item.buyUnder)],
-[
-"Absolute Max",
-formatMoney(item.absoluteMax ?? item.maxPrice)
-],
-[
-"Duplicate Check",
-isAlreadyOwned(item) ? "Already owned" : "Safe to buy"
-],
-["Owned Quantity", item.ownedQty ?? 0],
-["Last Seen", formatDate(item.lastSeenDate)],
-["Where Seen", item.whereSeen || "Not recorded"],
-["Wish ID", item.wishId || item.id || "Not recorded"],
-["Catalog ID", item.catalogId || "Not recorded"],
-["Notes", item.notes || "No notes"]
-];
-}
-
-if (recordType === "catalog") {
-details = [
-["Distillery", item.distillery || "Not recorded"],
-["Proof", formatProof(item.proof)],
-["Batch / Release", item.release || "Not recorded"],
-["Age", formatAge(item.age)],
-["Mash Bill", item.mashBill || "Unknown"],
-["Category", item.category || "Not recorded"],
-["Release Type", item.releaseType || "Not recorded"],
-["Bottle Size", item.size || "Not recorded"],
-["MSRP", formatMoney(item.msrp)],
-["Active", item.active === false ? "No" : "Yes"],
-["Source", item.source || "Not recorded"],
-["Catalog ID", item.catalogId || "Not recorded"]
-];
-}
-
-const notesLabels = new Set(["Notes"]);
-
-elements.dialogContent.innerHTML = `    <div class="dialog-body">       <div class="dialog-header">         <div class="dialog-image-wrap">
-          ${
-            image
-              ?`
-<img
-class="dialog-image"
-src="${escapeAttribute(image)}"
-alt="${escapeAttribute(
-`${item.brand || ""} ${item.expression || ""}`.trim()
-)}"
->
-`
-: bottlePlaceholder(item.brand)
-} </div>
-
-```
-    <div>
-      <p class="eyebrow">
-        ${escapeHtml(item.brand || "Unknown brand")}
-      </p>
-
-      <h3 id="dialog-title">
-        ${escapeHtml(item.expression || "Unnamed expression")}
-      </h3>
-
-      <p class="dialog-subtitle">
-        ${escapeHtml(
-          firstNonBlank(
-            item.release,
-            item.distillery,
-            item.category,
-            "Bottle details"
-          )
-        )}
-      </p>
-    </div>
-  </div>
-
-  <div class="detail-grid">
-    ${details
-      .map(([label, value]) => `
-        <div class="detail ${notesLabels.has(label) ? "detail-wide" : ""}">
-          <span>${escapeHtml(label)}</span>
-          <strong>${escapeHtml(value)}</strong>
+  els.dialogContent.innerHTML = `
+    <div class="dialog-body">
+      <div class="dialog-header">
+        <div class="dialog-image-wrap">
+          ${item.image ? `<img class="dialog-image" src="${attr(item.image)}" alt="${attr(`${item.brand} ${item.expression}`)}">` : bottlePlaceholder(item.brand)}
         </div>
-      `)
-      .join("")}
-  </div>
-</div>
-```
+        <div>
+          <p class="eyebrow">${html(item.brand || "Unknown brand")}</p>
+          <h3 id="dialog-title">${html(item.expression || "Unnamed expression")}</h3>
+          <p class="dialog-subtitle">${html(firstValue(item.release, item.distillery, item.category, "Bottle details"))}</p>
+        </div>
+      </div>
+      <div class="detail-grid">
+        ${details.map(([label, value]) => `<div class="detail ${label === "Notes" ? "detail-wide" : ""}"><span>${html(label)}</span><strong>${html(value)}</strong></div>`).join("")}
+      </div>
+    </div>
+  `;
 
-`;
-
-const dialogImage =
-elements.dialogContent.querySelector("img.dialog-image");
-
-if (dialogImage) {
-dialogImage.addEventListener(
-"error",
-() => {
-dialogImage.replaceWith(
-createPlaceholderElement(item.brand)
-);
-},
-{ once: true }
-);
-}
-
-document.body.classList.add("dialog-open");
-elements.dialog.showModal();
+  const dialogImage = els.dialogContent.querySelector(".dialog-image");
+  if (dialogImage) dialogImage.addEventListener("error", () => dialogImage.replaceWith(createPlaceholder(item.brand)), { once: true });
+  document.body.classList.add("dialog-open");
+  els.dialog.showModal();
 }
 
 function closeDialog() {
-if (elements.dialog && elements.dialog.open) {
-elements.dialog.close();
-}
-
-document.body.classList.remove("dialog-open");
+  if (els.dialog?.open) els.dialog.close();
+  document.body.classList.remove("dialog-open");
 }
 
 function switchView(viewName, updateHash = true) {
-const targetView = document.querySelector(`#${viewName}-view`);
+  const target = document.querySelector(`#${viewName}-view`);
+  if (!target) return;
 
-if (!targetView) {
-return;
-}
-
-document.querySelectorAll(".view").forEach(view => {
-view.classList.toggle("active", view === targetView);
-});
-
-document.querySelectorAll(".nav-button").forEach(button => {
-button.classList.toggle(
-"active",
-button.dataset.view === viewName
-);
-});
-
-if (updateHash) {
-history.replaceState(null, "", `#${viewName}`);
-}
-
-closeMobileMenu();
-
-window.scrollTo({
-top: 0,
-behavior: "smooth"
-});
-}
-
-function closeMobileMenu() {
-if (elements.primaryNavigation) {
-elements.primaryNavigation.classList.remove("open");
-}
-
-if (elements.mobileMenuButton) {
-elements.mobileMenuButton.setAttribute(
-"aria-expanded",
-"false"
-);
-}
+  document.querySelectorAll(".view").forEach(view => view.classList.toggle("active", view === target));
+  document.querySelectorAll(".nav-button").forEach(button => button.classList.toggle("active", button.dataset.view === viewName));
+  if (updateHash) history.replaceState(null, "", `#${viewName}`);
+  closeMobileMenu();
+  window.scrollTo({ top: 0, behavior: "smooth" });
 }
 
 function toggleMobileMenu() {
-if (
-!elements.primaryNavigation ||
-!elements.mobileMenuButton
-) {
-return;
+  if (!els.primaryNavigation || !els.mobileMenuButton) return;
+  const open = els.primaryNavigation.classList.toggle("open");
+  els.mobileMenuButton.setAttribute("aria-expanded", String(open));
 }
 
-const open =
-elements.primaryNavigation.classList.toggle("open");
-
-elements.mobileMenuButton.setAttribute(
-"aria-expanded",
-String(open)
-);
+function closeMobileMenu() {
+  els.primaryNavigation?.classList.remove("open");
+  els.mobileMenuButton?.setAttribute("aria-expanded", "false");
 }
 
-function clearFilters(filterGroup, renderFunction) {
-Object.values(filterGroup).forEach(control => {
-if (control) {
-control.value = "";
-}
-});
-
-renderFunction();
-}
-
-function calculateAverage(values) {
-if (!values.length) {
-return 0;
-}
-
-return values.reduce((total, value) => total + value, 0) /
-values.length;
+function clearFilters(group, render) {
+  Object.values(group).forEach(control => {
+    if (control) control.value = "";
+  });
+  render();
 }
 
 function showToast(message, type = "") {
-if (!elements.toastContainer || !message) {
-return;
-}
-
-const toast = document.createElement("div");
-toast.className = `toast ${type}`.trim();
-toast.textContent = message;
-
-elements.toastContainer.append(toast);
-
-window.setTimeout(() => {
-toast.remove();
-}, 5000);
+  if (!els.toastContainer || !message) return;
+  const toast = document.createElement("div");
+  toast.className = `toast ${type}`.trim();
+  toast.textContent = message;
+  els.toastContainer.append(toast);
+  window.setTimeout(() => toast.remove(), 5000);
 }
 
 function bindEvents() {
-document.querySelectorAll(".nav-button").forEach(button => {
-button.addEventListener("click", () => {
-switchView(button.dataset.view);
-});
-});
+  document.querySelectorAll(".nav-button").forEach(button => button.addEventListener("click", () => switchView(button.dataset.view)));
+  document.querySelectorAll("[data-jump-view]").forEach(button => button.addEventListener("click", () => switchView(button.dataset.jumpView)));
 
-document
-.querySelectorAll("[data-jump-view]")
-.forEach(button => {
-button.addEventListener("click", () => {
-switchView(button.dataset.jumpView);
-});
-});
+  Object.values(collectionFilters).forEach(control => {
+    control?.addEventListener("input", renderCollection);
+    control?.addEventListener("change", renderCollection);
+  });
 
-Object.values(collectionFilters).forEach(control => {
-if (control) {
-control.addEventListener("input", renderCollection);
-control.addEventListener("change", renderCollection);
-}
-});
+  Object.values(wishlistFilters).forEach(control => {
+    control?.addEventListener("input", renderWishlist);
+    control?.addEventListener("change", renderWishlist);
+  });
 
-Object.values(wishlistFilters).forEach(control => {
-if (control) {
-control.addEventListener("input", renderWishlist);
-control.addEventListener("change", renderWishlist);
-}
-});
+  Object.values(catalogFilters).forEach(control => {
+    control?.addEventListener("input", renderCatalog);
+    control?.addEventListener("change", renderCatalog);
+  });
 
-Object.values(catalogFilters).forEach(control => {
-if (control) {
-control.addEventListener("input", renderCatalog);
-control.addEventListener("change", renderCatalog);
-}
-});
-
-const clearCollection =
-document.querySelector("#clear-collection-filters");
-
-const clearWishlist =
-document.querySelector("#clear-wishlist-filters");
-
-const clearCatalog =
-document.querySelector("#clear-catalog-filters");
-
-if (clearCollection) {
-clearCollection.addEventListener("click", () => {
-clearFilters(collectionFilters, renderCollection);
-});
-}
-
-if (clearWishlist) {
-clearWishlist.addEventListener("click", () => {
-clearFilters(wishlistFilters, renderWishlist);
-});
-}
-
-if (clearCatalog) {
-clearCatalog.addEventListener("click", () => {
-clearFilters(catalogFilters, renderCatalog);
-});
-}
-
-if (elements.mobileMenuButton) {
-elements.mobileMenuButton.addEventListener(
-"click",
-toggleMobileMenu
-);
-}
-
-const closeButton = document.querySelector(".dialog-close");
-
-if (closeButton) {
-closeButton.addEventListener("click", closeDialog);
-}
-
-if (elements.dialog) {
-elements.dialog.addEventListener("click", event => {
-if (event.target === elements.dialog) {
-closeDialog();
-}
-});
-
-```
-elements.dialog.addEventListener("close", () => {
-  document.body.classList.remove("dialog-open");
-});
-```
-
-}
-
-document.addEventListener("keydown", event => {
-if (event.key === "Escape") {
-closeMobileMenu();
-}
-});
-
-window.addEventListener("hashchange", () => {
-const requestedView = location.hash.replace("#", "");
-
-```
-if (
-  ["dashboard", "collection", "wishlist", "catalog"]
-    .includes(requestedView)
-) {
-  switchView(requestedView, false);
-}
-```
-
-});
+  els.clearCollection?.addEventListener("click", () => clearFilters(collectionFilters, renderCollection));
+  els.clearWishlist?.addEventListener("click", () => clearFilters(wishlistFilters, renderWishlist));
+  els.clearCatalog?.addEventListener("click", () => clearFilters(catalogFilters, renderCatalog));
+  els.mobileMenuButton?.addEventListener("click", toggleMobileMenu);
+  els.dialogClose?.addEventListener("click", closeDialog);
+  els.dialog?.addEventListener("click", event => {
+    if (event.target === els.dialog) closeDialog();
+  });
+  els.dialog?.addEventListener("close", () => document.body.classList.remove("dialog-open"));
+  document.addEventListener("keydown", event => {
+    if (event.key === "Escape") closeMobileMenu();
+  });
+  window.addEventListener("hashchange", () => {
+    const view = location.hash.replace("#", "");
+    if (["dashboard", "collection", "wishlist", "catalog"].includes(view)) switchView(view, false);
+  });
 }
 
 function initializeView() {
-const requestedView = location.hash.replace("#", "");
-
-if (
-["dashboard", "collection", "wishlist", "catalog"]
-.includes(requestedView)
-) {
-switchView(requestedView, false);
-} else {
-switchView("dashboard", false);
-}
+  const view = location.hash.replace("#", "");
+  switchView(["dashboard", "collection", "wishlist", "catalog"].includes(view) ? view : "dashboard", false);
 }
 
 bindEvents();
