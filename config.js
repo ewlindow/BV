@@ -1,5 +1,5 @@
 window.BOURBON_VAULT_CONFIG = {
   // Replace this with your deployed Google Apps Script URL ending in /exec.
-  apiUrl: "PASTE_YOUR_GOOGLE_APPS_SCRIPT_WEB_APP_URL_HERE",
+  apiUrl: "https://script.google.com/macros/s/AKfycbySmMxtPh1LAtzvxhN9lHluemuBSq_C6Jr55OP_9g6j8xXUWmMn3V1-H6rD5OeMMmNSWg/exec",
   useFallbackData: true
 };
