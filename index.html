@@ -1,488 +1,147 @@
 <!doctype html>
-
 <html lang="en">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="theme-color" content="#17110d">
-  <meta
-    name="description"
-    content="Bourbon Vault collection, bottle catalog, wishlist, and hunting dashboard."
-  >
-
+  <meta name="theme-color" content="#090807">
+  <meta name="description" content="Bourbon Vault collection, wishlist, and bottle catalog.">
   <title>Bourbon Vault</title>
-
-  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="styles.css?v=2.3">
 </head>
-
 <body>
   <header class="site-header">
     <div class="shell header-inner">
-      <a class="brand" href="#dashboard" aria-label="Bourbon Vault home">
+      <a class="brand" href="#dashboard" aria-label="Bourbon Vault dashboard">
         <span class="brand-mark" aria-hidden="true">BV</span>
+        <span class="brand-copy"><strong>Bourbon Vault</strong><small>Private Collection</small></span>
+      </a>
 
-```
-    <span class="brand-copy">
-      <strong>Bourbon Vault</strong>
-      <small>Private Reserve</small>
-    </span>
-  </a>
+      <button id="mobile-menu-button" class="mobile-menu-button" type="button" aria-label="Open navigation" aria-expanded="false">
+        <span></span><span></span><span></span>
+      </button>
 
-  <button
-    id="mobile-menu-button"
-    class="mobile-menu-button"
-    type="button"
-    aria-label="Open navigation"
-    aria-expanded="false"
-    aria-controls="primary-navigation"
-  >
-    <span></span>
-    <span></span>
-    <span></span>
-  </button>
-
-  <nav id="primary-navigation" class="primary-navigation" aria-label="Primary navigation">
-    <button class="nav-button active" type="button" data-view="dashboard">
-      Dashboard
-    </button>
-
-    <button class="nav-button" type="button" data-view="collection">
-      Collection
-    </button>
-
-    <button class="nav-button" type="button" data-view="wishlist">
-      Wishlist
-    </button>
-
-    <button class="nav-button" type="button" data-view="catalog">
-      Catalog
-    </button>
-  </nav>
-</div>
-```
-
+      <nav id="primary-navigation" class="primary-navigation" aria-label="Primary navigation">
+        <button class="nav-button active" type="button" data-view="dashboard">Dashboard</button>
+        <button class="nav-button" type="button" data-view="collection">Collection</button>
+        <button class="nav-button" type="button" data-view="wishlist">Wishlist</button>
+        <button class="nav-button" type="button" data-view="catalog">Catalog</button>
+      </nav>
+    </div>
   </header>
 
   <main class="shell">
-    <section class="hero" aria-labelledby="hero-title">
+    <section class="hero">
       <div class="hero-content">
-        <p class="eyebrow">Home collection</p>
-
-```
-    <h1 id="hero-title">
-      Know what is already in the house before another bottle follows you home.
-    </h1>
-
-    <p class="hero-copy">
-      Browse the collection, check the hunt list, compare prices, and avoid
-      buying a duplicate because memory becomes suspiciously flexible in the
-      liquor aisle.
-    </p>
-
-    <div class="hero-actions">
-      <button class="button button-primary" type="button" data-jump-view="collection">
-        Browse Collection
-      </button>
-
-      <button class="button button-secondary" type="button" data-jump-view="wishlist">
-        Open Wishlist
-      </button>
-    </div>
-  </div>
-
-  <div class="hero-badge" aria-hidden="true">
-    <span>BOURBON</span>
-    <strong>VAULT</strong>
-    <small>PRIVATE RESERVE</small>
-  </div>
-</section>
-
-<section
-  id="dashboard-view"
-  class="view active"
-  aria-labelledby="dashboard-title"
->
-  <div class="section-heading">
-    <div>
-      <p class="eyebrow">At a glance</p>
-      <h2 id="dashboard-title">Vault dashboard</h2>
-    </div>
-
-    <div class="count-stack">
-      <p id="data-status" class="data-status" aria-live="polite">
-        Loading vault data…
-      </p>
-
-      <p id="last-updated" class="last-updated"></p>
-    </div>
-  </div>
-
-  <div
-    id="dashboard-metrics"
-    class="metrics dashboard-metrics"
-    aria-label="Collection summary"
-  ></div>
-
-  <div class="dashboard-layout">
-    <article class="panel dashboard-panel">
-      <div class="panel-heading">
-        <div>
-          <p class="eyebrow">Inventory</p>
-          <h3>Collection status</h3>
+        <p class="eyebrow">Private reserve</p>
+        <h1>A clearer view of every bottle in the vault.</h1>
+        <p class="hero-copy">Track the collection, check hunting limits, and confirm what is already owned before another bottle follows you home under suspicious circumstances.</p>
+        <div class="hero-actions">
+          <button class="button button-primary" type="button" data-jump-view="collection">Browse collection</button>
+          <button class="button button-secondary" type="button" data-jump-view="wishlist">Open wishlist</button>
         </div>
       </div>
+      <div class="hero-badge" aria-hidden="true"><span>BOURBON</span><strong>VAULT</strong><small>VERSION 2</small></div>
+    </section>
 
-      <div id="status-summary" class="status-summary"></div>
-    </article>
-
-    <article class="panel dashboard-panel">
-      <div class="panel-heading">
-        <div>
-          <p class="eyebrow">Shopping</p>
-          <h3>Hunt snapshot</h3>
-        </div>
+    <section id="dashboard-view" class="view active" aria-labelledby="dashboard-title">
+      <div class="section-heading">
+        <div><p class="eyebrow">At a glance</p><h2 id="dashboard-title">Vault dashboard</h2></div>
+        <div class="count-stack"><p id="data-status" class="data-status">Loading vault data…</p><p id="last-updated" class="last-updated"></p></div>
       </div>
 
-      <div id="hunt-summary" class="hunt-summary"></div>
-    </article>
+      <div id="dashboard-metrics" class="metrics" aria-label="Vault summary"></div>
 
-    <article class="panel dashboard-panel dashboard-panel-wide">
-      <div class="panel-heading">
-        <div>
-          <p class="eyebrow">Recently added</p>
-          <h3>Latest bottles</h3>
-        </div>
+      <div class="dashboard-layout">
+        <section class="panel">
+          <div class="panel-heading"><h3>Bottle status</h3><button class="text-button" type="button" data-jump-view="collection">View collection</button></div>
+          <div id="status-summary" class="status-summary"></div>
+        </section>
 
-        <button
-          class="text-button"
-          type="button"
-          data-jump-view="collection"
-        >
-          View all
-        </button>
+        <section class="panel">
+          <div class="panel-heading"><h3>Hunt overview</h3><button class="text-button" type="button" data-jump-view="wishlist">View wishlist</button></div>
+          <div id="hunt-summary" class="hunt-summary"></div>
+        </section>
+
+        <section class="panel dashboard-panel-wide">
+          <div class="panel-heading"><h3>Recently added</h3><button class="text-button" type="button" data-jump-view="collection">See all bottles</button></div>
+          <div id="recent-bottles" class="recent-bottles"></div>
+        </section>
+      </div>
+    </section>
+
+    <section id="collection-view" class="view" aria-labelledby="collection-title">
+      <div class="section-heading">
+        <div><p class="eyebrow">Inventory</p><h2 id="collection-title">Current collection</h2></div>
+        <p id="collection-count" class="result-count" aria-live="polite"></p>
       </div>
 
-      <div id="recent-bottles" class="recent-bottles"></div>
-    </article>
-  </div>
-</section>
+      <div class="toolbar" aria-label="Collection filters">
+        <label class="toolbar-field toolbar-search"><span>Search</span><input id="search-input" type="search" placeholder="Brand, expression, distillery…"></label>
+        <label class="toolbar-field"><span>Status</span><select id="status-filter"><option value="">All statuses</option></select></label>
+        <label class="toolbar-field"><span>Distillery</span><select id="distillery-filter"><option value="">All distilleries</option></select></label>
+        <label class="toolbar-field"><span>Category</span><select id="category-filter"><option value="">All categories</option></select></label>
+        <label class="toolbar-field"><span>Sort</span><select id="sort-filter"><option value="brand">Brand A–Z</option><option value="date-desc">Recently added</option><option value="proof-desc">Highest proof</option><option value="proof-asc">Lowest proof</option><option value="msrp-desc">Highest MSRP</option><option value="rating-desc">Highest rating</option></select></label>
+        <button id="clear-collection-filters" class="button button-secondary button-small" type="button">Clear</button>
+      </div>
 
-<section
-  id="collection-view"
-  class="view"
-  aria-labelledby="collection-title"
->
-  <div class="section-heading">
-    <div>
-      <p class="eyebrow">Inventory</p>
-      <h2 id="collection-title">Current collection</h2>
-    </div>
+      <div id="collection-grid" class="card-grid"></div>
+      <p id="collection-empty" class="empty-state" hidden>No bottles match those filters.</p>
+    </section>
 
-    <div class="count-stack">
-      <p
-        id="collection-count"
-        class="result-count"
-        aria-live="polite"
-      ></p>
-    </div>
-  </div>
+    <section id="wishlist-view" class="view" aria-labelledby="wishlist-title">
+      <div class="section-heading">
+        <div><p class="eyebrow">Shopping mode</p><h2 id="wishlist-title">Bottle wishlist</h2></div>
+        <p id="wishlist-count" class="result-count" aria-live="polite"></p>
+      </div>
 
-  <div class="toolbar" aria-label="Collection filters">
-    <label class="toolbar-field toolbar-search">
-      <span>Search</span>
+      <div class="shopping-note"><span class="shopping-note-icon" aria-hidden="true">$</span><div><strong>Use the buying limits.</strong><span>MSRP is ideal, “Buy under” is sensible, and “Absolute max” is where enthusiasm is supposed to encounter adult supervision.</span></div></div>
 
-      <input
-        id="search-input"
-        type="search"
-        placeholder="Brand, expression, distillery…"
-        autocomplete="off"
-      >
-    </label>
+      <div class="toolbar wishlist-toolbar" aria-label="Wishlist filters">
+        <label class="toolbar-field toolbar-search"><span>Search</span><input id="wishlist-search-input" type="search" placeholder="Brand, expression, release…"></label>
+        <label class="toolbar-field"><span>Priority</span><select id="wishlist-priority-filter"><option value="">All priorities</option></select></label>
+        <label class="toolbar-field"><span>Status</span><select id="wishlist-status-filter"><option value="">All statuses</option></select></label>
+        <label class="toolbar-field"><span>Ownership</span><select id="wishlist-duplicate-filter"><option value="">All targets</option><option value="safe">Safe to buy</option><option value="owned">Already owned</option></select></label>
+        <label class="toolbar-field"><span>Sort</span><select id="wishlist-sort-filter"><option value="priority">Priority</option><option value="brand">Brand A–Z</option><option value="buy-under-asc">Lowest buy-under price</option><option value="absolute-max-asc">Lowest maximum price</option><option value="msrp-asc">Lowest MSRP</option></select></label>
+        <button id="clear-wishlist-filters" class="button button-secondary button-small" type="button">Clear</button>
+      </div>
 
-    <label class="toolbar-field">
-      <span>Status</span>
+      <div id="wishlist-grid" class="wishlist-grid"></div>
+      <p id="wishlist-empty" class="empty-state" hidden>No wishlist targets match those filters.</p>
+    </section>
 
-      <select id="status-filter">
-        <option value="">All statuses</option>
-      </select>
-    </label>
+    <section id="catalog-view" class="view" aria-labelledby="catalog-title">
+      <div class="section-heading">
+        <div><p class="eyebrow">Master records</p><h2 id="catalog-title">Bottle catalog</h2></div>
+        <p id="catalog-count" class="result-count" aria-live="polite"></p>
+      </div>
 
-    <label class="toolbar-field">
-      <span>Distillery</span>
+      <div class="toolbar catalog-toolbar" aria-label="Catalog filters">
+        <label class="toolbar-field toolbar-search"><span>Search</span><input id="catalog-search-input" type="search" placeholder="Brand, expression, mash bill…"></label>
+        <label class="toolbar-field"><span>Distillery</span><select id="catalog-distillery-filter"><option value="">All distilleries</option></select></label>
+        <label class="toolbar-field"><span>Category</span><select id="catalog-category-filter"><option value="">All categories</option></select></label>
+        <label class="toolbar-field"><span>Release type</span><select id="catalog-release-filter"><option value="">All release types</option></select></label>
+        <label class="toolbar-field"><span>Sort</span><select id="catalog-sort-filter"><option value="brand">Brand A–Z</option><option value="proof-desc">Highest proof</option><option value="msrp-desc">Highest MSRP</option></select></label>
+        <button id="clear-catalog-filters" class="button button-secondary button-small" type="button">Clear</button>
+      </div>
 
-      <select id="distillery-filter">
-        <option value="">All distilleries</option>
-      </select>
-    </label>
-
-    <label class="toolbar-field">
-      <span>Category</span>
-
-      <select id="category-filter">
-        <option value="">All categories</option>
-      </select>
-    </label>
-
-    <label class="toolbar-field">
-      <span>Sort</span>
-
-      <select id="sort-filter">
-        <option value="brand">Brand A–Z</option>
-        <option value="date-desc">Recently added</option>
-        <option value="proof-desc">Highest proof</option>
-        <option value="proof-asc">Lowest proof</option>
-        <option value="msrp-desc">Highest MSRP</option>
-        <option value="rating-desc">Highest rated</option>
-      </select>
-    </label>
-
-    <button
-      id="clear-collection-filters"
-      class="button button-small button-secondary"
-      type="button"
-    >
-      Clear
-    </button>
-  </div>
-
-  <div
-    id="collection-grid"
-    class="card-grid"
-    aria-live="polite"
-  ></div>
-
-  <p id="collection-empty" class="empty-state" hidden>
-    No bottles match those filters. The bourbon exists; your search criteria
-    are simply being dramatic.
-  </p>
-</section>
-
-<section
-  id="wishlist-view"
-  class="view"
-  aria-labelledby="wishlist-title"
->
-  <div class="section-heading">
-    <div>
-      <p class="eyebrow">Shopping mode</p>
-      <h2 id="wishlist-title">Bourbon hunt list</h2>
-    </div>
-
-    <p
-      id="wishlist-count"
-      class="result-count"
-      aria-live="polite"
-    ></p>
-  </div>
-
-  <div class="shopping-note">
-    <div class="shopping-note-icon" aria-hidden="true">!</div>
-
-    <div>
-      <strong>Before buying:</strong>
-
-      <span>
-        Confirm the bottle is marked safe to buy, compare the asking price
-        with your target and absolute maximum, and resist the ancient human
-        urge to declare every bottle a once-in-a-lifetime opportunity.
-      </span>
-    </div>
-  </div>
-
-  <div class="toolbar wishlist-toolbar" aria-label="Wishlist filters">
-    <label class="toolbar-field toolbar-search">
-      <span>Search</span>
-
-      <input
-        id="wishlist-search-input"
-        type="search"
-        placeholder="Brand, expression, distillery…"
-        autocomplete="off"
-      >
-    </label>
-
-    <label class="toolbar-field">
-      <span>Priority</span>
-
-      <select id="wishlist-priority-filter">
-        <option value="">All priorities</option>
-      </select>
-    </label>
-
-    <label class="toolbar-field">
-      <span>Status</span>
-
-      <select id="wishlist-status-filter">
-        <option value="">All statuses</option>
-      </select>
-    </label>
-
-    <label class="toolbar-field">
-      <span>Duplicate check</span>
-
-      <select id="wishlist-duplicate-filter">
-        <option value="">All bottles</option>
-        <option value="safe">Safe to buy</option>
-        <option value="owned">Already owned</option>
-      </select>
-    </label>
-
-    <label class="toolbar-field">
-      <span>Sort</span>
-
-      <select id="wishlist-sort-filter">
-        <option value="priority">Priority</option>
-        <option value="brand">Brand A–Z</option>
-        <option value="buy-under-asc">Lowest target price</option>
-        <option value="absolute-max-asc">Lowest maximum price</option>
-        <option value="msrp-asc">Lowest MSRP</option>
-      </select>
-    </label>
-
-    <button
-      id="clear-wishlist-filters"
-      class="button button-small button-secondary"
-      type="button"
-    >
-      Clear
-    </button>
-  </div>
-
-  <div
-    id="wishlist-grid"
-    class="wishlist-grid"
-    aria-live="polite"
-  ></div>
-
-  <p id="wishlist-empty" class="empty-state" hidden>
-    No wishlist bottles match those filters. Either the hunt is over or the
-    filters have become needlessly ambitious.
-  </p>
-</section>
-
-<section
-  id="catalog-view"
-  class="view"
-  aria-labelledby="catalog-title"
->
-  <div class="section-heading">
-    <div>
-      <p class="eyebrow">Master records</p>
-      <h2 id="catalog-title">Bottle catalog</h2>
-    </div>
-
-    <p
-      id="catalog-count"
-      class="result-count"
-      aria-live="polite"
-    ></p>
-  </div>
-
-  <div class="toolbar catalog-toolbar" aria-label="Catalog filters">
-    <label class="toolbar-field toolbar-search">
-      <span>Search</span>
-
-      <input
-        id="catalog-search-input"
-        type="search"
-        placeholder="Brand, expression, release…"
-        autocomplete="off"
-      >
-    </label>
-
-    <label class="toolbar-field">
-      <span>Distillery</span>
-
-      <select id="catalog-distillery-filter">
-        <option value="">All distilleries</option>
-      </select>
-    </label>
-
-    <label class="toolbar-field">
-      <span>Category</span>
-
-      <select id="catalog-category-filter">
-        <option value="">All categories</option>
-      </select>
-    </label>
-
-    <label class="toolbar-field">
-      <span>Release type</span>
-
-      <select id="catalog-release-filter">
-        <option value="">All release types</option>
-      </select>
-    </label>
-
-    <label class="toolbar-field">
-      <span>Sort</span>
-
-      <select id="catalog-sort-filter">
-        <option value="brand">Brand A–Z</option>
-        <option value="proof-desc">Highest proof</option>
-        <option value="msrp-desc">Highest MSRP</option>
-      </select>
-    </label>
-
-    <button
-      id="clear-catalog-filters"
-      class="button button-small button-secondary"
-      type="button"
-    >
-      Clear
-    </button>
-  </div>
-
-  <div
-    id="catalog-grid"
-    class="card-grid catalog-grid"
-    aria-live="polite"
-  ></div>
-
-  <p id="catalog-empty" class="empty-state" hidden>
-    No catalog records match those filters.
-  </p>
-</section>
-```
-
+      <div id="catalog-grid" class="card-grid catalog-grid"></div>
+      <p id="catalog-empty" class="empty-state" hidden>No catalog records match those filters.</p>
+    </section>
   </main>
 
   <dialog id="bottle-dialog" aria-labelledby="dialog-title">
-    <button
-      class="dialog-close"
-      type="button"
-      aria-label="Close bottle details"
-    >
-      ×
-    </button>
-
-```
-<div id="dialog-content"></div>
-```
-
+    <button class="dialog-close" type="button" aria-label="Close bottle details">×</button>
+    <div id="dialog-content"></div>
   </dialog>
 
   <div id="toast-container" class="toast-container" aria-live="polite"></div>
 
   <footer class="site-footer">
-    <div class="shell footer-inner">
-      <div>
-        <strong>Bourbon Vault</strong>
-        <p>Collection data powered by Google Sheets.</p>
-      </div>
-
-```
-  <p id="footer-version">Version 2.0</p>
-</div>
-```
-
+    <div class="shell footer-inner"><div><strong>Bourbon Vault</strong><p>Google Sheets-powered collection management.</p></div><p id="footer-version">Version 2.0</p></div>
   </footer>
 
-  <script src="config.js"></script>
-
-  <script src="fallback-data.js"></script>
-
-  <script src="app.js"></script>
-
+  <script src="config.js?v=2.3"></script>
+  <script src="fallback-data.js?v=2.3"></script>
+  <script src="app.js?v=2.3"></script>
 </body>
 </html>
